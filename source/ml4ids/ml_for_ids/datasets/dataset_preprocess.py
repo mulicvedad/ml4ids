@@ -30,11 +30,17 @@ def dataset_cleanup(dataset, drop_columns=None):
 
 # Feature extraction - later on
 # test = SelectKBest(score_func=chi2, k=10)
-def split_data(dataset, target_map_fun=None):
-    ds_vals = dataset.values
+def split_data(df, target_map_fun=None):
+    ds_vals = df.values
+    X, Y = split_data_and_labels_cols(ds_vals, target_map_fun)
+    return train_test_split(X, Y, test_size=0.2, random_state=42)
 
-    X = ds_vals[:, 0:-1]
-    Y = ds_vals[:, -1]
+
+def split_data_and_labels_cols(df, target_map_fun=None):
+    data = df.values
+
+    X = data[:, 0:-1]
+    Y = data[:, -1]
 
     if target_map_fun:
         for k, v in enumerate(Y):
@@ -46,4 +52,4 @@ def split_data(dataset, target_map_fun=None):
     min_max_scaler = MinMaxScaler()
     X = min_max_scaler.fit_transform(X)
 
-    return train_test_split(X, Y, test_size=0.2, random_state=42)
+    return X, Y
