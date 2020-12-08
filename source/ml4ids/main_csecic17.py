@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from enum import IntEnum
 import pandas as pd
 
 from ml_for_ids.datasets.datset_info import DATASET_ROOT_DIR, IDSDataset
@@ -15,11 +14,10 @@ plt.style.use('ggplot')
 from matplotlib.pyplot import figure
 
 
-matplotlib.rcParams['figure.figsize'] = (12, 8)
+matplotlib.rcParams['figure.figsize'] = (12,8)
 
 
-PREDEFINED_TRAINING_CSV_PATH = "dataset/unsw_nb15/predefined/UNSW_NB15_training-set.csv"
-PREDEFINED_TESTING_CSV_PATH = "dataset/unsw_nb15/predefined/UNSW_NB15_testing-set.csv"
+SAMPLED_CSV_PATH = "dataset/unsw_nb15/predefined/UNSW_NB15_training-set.csv"
 
 
 def parse_cmd_args():
@@ -31,11 +29,11 @@ def parse_cmd_args():
 
 def main():
     args = parse_cmd_args()
+    dataset = IDSDataset.CSE_CIC_IDS_2017
 
     if args.simple:
-        train_df = pd.read_csv(PREDEFINED_TRAINING_CSV_PATH, usecols=IDSDataset.UNSW_NB15.get_attrs())
-        test_df = pd.read_csv(PREDEFINED_TESTING_CSV_PATH, usecols=IDSDataset.UNSW_NB15.get_attrs())
-        df = pd.concat([train_df, test_df])
+        # Load smaller - sampled CSV
+        df = pd.read_csv(SAMPLED_CSV_PATH, usecols=dataset.get_attrs())
 
         analyze_missing_data(df)
         df = handle_missing_data(df)
@@ -43,18 +41,14 @@ def main():
         df = scale_numeric_data(df)
         df = remove_duplicate_observations(df)
 
-        train_df = df[0:train_df.shape[0]]
-        x_train, y_train = split_data_and_labels_cols(train_df)
-
-        test_df = df[train_df.shape[0]:]
-        x_test, y_test = split_data_and_labels_cols(test_df)
+        x_train, x_test, y_train, y_test = split_data(df, target_map_fun=IDSDataset.get_target_map_fun(dataset))
     else:
         # Load full data set (4 CSVs)
         data_frame = load_csv_dataset(dir_with_csvs=DATASET_ROOT_DIR + IDSDataset.UNSW_NB15.get_dataset_dir())
         data_frame = dataset_cleanup(data_frame)
         x_train, x_test, y_train, y_test = split_data(data_frame)
 
-    model = SimpleDNNModel(x_train, x_test, y_train, y_test, IDSDataset.UNSW_NB15.get_dataset_dir())
+    model = SimpleDNNModel(x_train, x_test, y_train, y_test, dataset.get_dataset_dir())
     model.train()
     model.test()
     model.save()
