@@ -32,7 +32,7 @@ def dataset_cleanup(dataset, drop_columns=None):
 
     print('Dataset shape: {}'.format(dataset.values.shape))
 
-    # dataset.values[abs(dataset.values) == np.inf] = 0
+    # datasets.values[abs(datasets.values) == np.inf] = 0
 
     return dataset
 
@@ -40,8 +40,7 @@ def dataset_cleanup(dataset, drop_columns=None):
 # Feature extraction - later on
 # test = SelectKBest(score_func=chi2, k=10)
 def split_data(df, target_map_fun=None):
-    ds_vals = df.values
-    X, Y = split_data_and_labels_cols(ds_vals, target_map_fun)
+    X, Y = split_data_and_labels_cols(df, target_map_fun)
     return train_test_split(X, Y, test_size=0.2, random_state=42)
 
 
@@ -58,15 +57,14 @@ def split_data_and_labels_cols(df, target_map_fun=None):
     X = X.astype(float)
     Y = Y.astype(int)
     X[X == np.inf] = 0.0
-    min_max_scaler = MinMaxScaler()
-    X = min_max_scaler.fit_transform(X)
 
     return X, Y
 
 
 def remove_non_numeric_cols(df):
     log(df, "Before handle non numeric cols")
-    df = df.select_dtypes(include=np.number)
+    # df = df.select_dtypes(include=np.number)
+    df.iloc[:, 0:-1] = df.iloc[:, 0:-1].astype(float)
     log(df, "After handle non numeric cols")
     return df
 
@@ -94,18 +92,19 @@ def plot_missing_data_heatmap(df):
 
 
 def plot_missing_data_histogram(df):
-    for col in df.columns:
-        missing = df[col].isnull()
+    df_for_plot = df.copy()
+    for col in df_for_plot.columns:
+        missing = df_for_plot[col].isnull()
         num_missing = np.sum(missing)
 
         if num_missing > 0:
             print('created missing indicator for: {}'.format(col))
-            df['{}_ismissing'.format(col)] = missing
+            df_for_plot['{}_ismissing'.format(col)] = missing
 
     # then based on the indicator, plot the histogram of missing values
-    ismissing_cols = [col for col in df.columns if 'ismissing' in col]
-    df['num_missing'] = df[ismissing_cols].sum(axis=1)
-    df['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
+    ismissing_cols = [col for col in df_for_plot.columns if 'ismissing' in col]
+    df_for_plot['num_missing'] = df_for_plot[ismissing_cols].sum(axis=1)
+    df_for_plot['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
 
 
 def handle_missing_data(df, strategy=MissingDataResolutionStrategy.DROP_OBSERVATION):
@@ -151,7 +150,7 @@ def scale_numeric_data(df, has_label=True):
     min_max_scaler = MinMaxScaler()
 
     if has_label: # Do not scale the label column
-        df[df.columns[0: -1]] = MinMaxScaler().fit_transform(df.iloc[:, 0:-1])
+        df.loc[1:, df.columns[0: -1]] = MinMaxScaler().fit_transform(df.iloc[1:, 0:-1])
         return df
 
     return min_max_scaler.fit_transform(df)
@@ -161,6 +160,7 @@ def remove_duplicate_observations(df):
     df_dedupped = df.drop_duplicates()
     log(df, "Before removing duplicates")
     log(df_dedupped, "After removing duplicates")
+    return df_dedupped
 
 
 def log(df, step):

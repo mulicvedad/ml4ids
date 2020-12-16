@@ -13,10 +13,7 @@ ALL_FEATURES = [
      'ct_src_ltm', 'ct_srv_dst', 'label'],
 
     # '''Down/Up Ratio''' '''Subflow Fwd Packets''' '''Subflow Bwd Packets''' '''act_data_pkt_fwd'''
-    [' Total Fwd Packets', ' Total Backward Packets', ' Fwd Packet Length Max', ' Fwd Packet Length Min', ' Fwd Packet Length Mean',
-     ' Fwd Packet Length Std', ' Bwd Packet Length Min', ' Bwd Packet Length Mean', ' Bwd Packet Length Std', 'Flow Bytes/s', ' Flow Packets/s',
-     ' Min Packet Length', ' Packet Length Mean', ' Packet Length Std', ' PSH Flag Count', ' ACK Flag Count', ' Average Packet Size',
-     ' Avg Fwd Segment Size', ' Avg Bwd Segment Size', ' Label'],
+    [' Total Fwd Packets', ' Total Backward Packets', ' Fwd Packet Length Max', ' Fwd Packet Length Min', ' Fwd Packet Length Mean',' Fwd Packet Length Std', ' Bwd Packet Length Min', ' Bwd Packet Length Mean', ' Bwd Packet Length Std', ' Min Packet Length', ' Packet Length Mean', ' Packet Length Std', ' PSH Flag Count', ' ACK Flag Count', ' Average Packet Size',' Avg Fwd Segment Size', ' Avg Bwd Segment Size', ' Label'],
 
     ['''Protocol',''' 'Tot Fwd Pkts', 'Tot Bwd Pkts', 'Fwd Pkt Len Max', 'Fwd Pkt Len Min', 'Fwd Pkt Len Mean', 'Fwd Pkt Len Std',
      'Bwd Pkt Len Max', 'Bwd Pkt Len Min', 'Bwd Pkt Len Mean', 'Bwd Pkt Len Std', 'Flow Byts/s', 'Flow Pkts/s', 'Pkt Len Min',
