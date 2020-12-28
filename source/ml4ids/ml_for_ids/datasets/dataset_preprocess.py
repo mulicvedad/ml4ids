@@ -3,38 +3,16 @@ from enum import IntEnum
 import numpy as np
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, RobustScaler
 from sklearn.utils import shuffle
+
+from ml_for_ids.datasets.dataset_visualization import *
 
 
 class MissingDataResolutionStrategy(IntEnum):
     DROP_OBSERVATION = 1,
     DROP_FEATURE = 2,
     REPLACE_WITH_MEAN = 3
-
-
-# @deprecated
-def dataset_cleanup(dataset, drop_columns=None):
-    dataset = shuffle(dataset)
-
-    print('Dataset shape: {}'.format(dataset.values.shape))
-
-    dataset.replace([np.inf, -np.inf], np.nan)
-    dataset.dropna(how='any', inplace=True)
-
-    if drop_columns is not None:
-        dataset.drop(drop_columns, axis=1)
-
-    print('Dataset shape: {}'.format(dataset.values.shape))
-
-    dataset = dataset.drop(dataset.std()[dataset.std() < .3].index.values, axis=1)
-    dataset = dataset.drop(dataset.std()[dataset.std() > 1000].index.values, axis=1)
-
-    print('Dataset shape: {}'.format(dataset.values.shape))
-
-    # datasets.values[abs(datasets.values) == np.inf] = 0
-
-    return dataset
 
 
 # Feature extraction - later on
@@ -56,15 +34,15 @@ def split_data_and_labels_cols(df, target_map_fun=None):
 
     X = X.astype(float)
     Y = Y.astype(int)
-    X[X == np.inf] = 0.0
 
     return X, Y
 
 
-def remove_non_numeric_cols(df):
+def cast_to_float(df):
     log(df, "Before handle non numeric cols")
-    # df = df.select_dtypes(include=np.number)
-    df.iloc[:, 0:-1] = df.iloc[:, 0:-1].astype(float)
+    print("### Column types before casting: {}".format(df.dtypes))
+    df.iloc[:, 0:-1] = df.iloc[:, 0:-1].astype(dtype=float)
+    print("### Column types after casting: {}".format(df.dtypes))
     log(df, "After handle non numeric cols")
     return df
 
@@ -80,37 +58,65 @@ def log_missing_data_info(df):
         print('{} - {}%'.format(col, round(pct_missing * 100)))
 
 
-def plot_missing_data_info(df):
-    plot_missing_data_heatmap(df)
-    plot_missing_data_histogram(df)
+def handle_negative_and_inf_values(df):
+    df = df.replace([np.inf, -np.inf], np.nan)
+
+    for col in df.columns:
+        if df[col].dtype == float or df[col].dtype == int:
+            vals = df[col]
+            num_neg = len(vals[vals < 0])
+            num_inf = len(vals[vals == np.inf])
+            num_inf += len(vals[vals == -np.inf])
+
+            if num_neg > 0:
+                print("Col {} contains {} negative values".format(col, num_neg))
+                mean = vals[vals > 0].mean()
+                df[col][df[col] < 0] = mean
+
+            if num_inf > 0:
+                print("Col {} contains {} infinite values".format(col, num_inf))
+                mean = vals[vals > 0].mean()
+                df[col][df[col] == np.inf | df[col] == -np.inf] = mean
+
+    return df
 
 
-def plot_missing_data_heatmap(df):
-    import seaborn as sns
-    colours = ['#E27B65', '#50A372']  # Mark rows with missing data with red color, otherwise green
-    sns.heatmap(df.isnull(), cmap=sns.color_palette(colours))
+def handle_outliers(df):
+    log(df, "Handle outliers")
+    cols_to_remove = []
+
+    for col in df.columns:
+        if (df[col].dtype == float or df[col].dtype == int) and col.lower() != "label":
+            Q1 = df[col].quantile(0.25)
+            Q3 = df[col].quantile(0.75)
+            _90th = df[col].quantile(0.9)
+            _95th = df[col].quantile(0.95)
+            _98th = df[col].quantile(0.98)
+            IQR = Q3 - Q1
+            max_val = df[col].max()
+
+            log_quantiles(col, Q1, Q3, IQR, _90th, _95th, _98th, max_val, df[col].skew())
+
+            if Q1 == 0 and Q3 == 0:
+                print("Removing column because at least 75% are zeros")
+                cols_to_remove.append(col)
+            else:
+                # We handle outliers by cutting them to the value of 95th percentile
+                df[col] = np.where(df[col] > _95th, _95th, df[col])
+                print("Skew value after ={}".format(df[col].skew()))
+
+    for col in cols_to_remove:
+        del df[col]
 
 
-def plot_missing_data_histogram(df):
-    df_for_plot = df.copy()
-    for col in df_for_plot.columns:
-        missing = df_for_plot[col].isnull()
-        num_missing = np.sum(missing)
-
-        if num_missing > 0:
-            print('created missing indicator for: {}'.format(col))
-            df_for_plot['{}_ismissing'.format(col)] = missing
-
-    # then based on the indicator, plot the histogram of missing values
-    ismissing_cols = [col for col in df_for_plot.columns if 'ismissing' in col]
-    df_for_plot['num_missing'] = df_for_plot[ismissing_cols].sum(axis=1)
-    df_for_plot['num_missing'].value_counts().reset_index().sort_values(by='index').plot.bar(x='index', y='num_missing')
+def exec_z_score_eval(df):
+    from scipy import stats
+    z = np.abs(stats.zscore(df.hp))
+    print(z)
 
 
 def handle_missing_data(df, strategy=MissingDataResolutionStrategy.DROP_OBSERVATION):
     log(df, "Before handle missing data")
-
-    df.replace([np.inf, -np.inf], np.nan)
 
     if strategy == MissingDataResolutionStrategy.DROP_OBSERVATION:
         df.dropna(how='any', inplace=True, axis=0)
@@ -137,7 +143,10 @@ def handle_missing_data(df, strategy=MissingDataResolutionStrategy.DROP_OBSERVAT
 def handle_columns_with_outstanding_deviation(df):
     log(df, "Before handling of std deviation")
 
-    df = df.drop(df.std()[df.std() < .3].index.values, axis=1)
+    for col in df.columns:
+        print("Std dev for col={}, std={}".format(col, df[col].std))
+
+    df = df.drop(df.std()[df.std() < .1].index.values, axis=1)
     df = df.drop(df.std()[df.std() > 1000].index.values, axis=1)
 
     log(df, "After handling of std deviation")
@@ -145,15 +154,17 @@ def handle_columns_with_outstanding_deviation(df):
     return df
 
 
-def scale_numeric_data(df, has_label=True):
+def scale_numeric_data(df, scaler=None, has_label=True):
     log(df, "Scaling data")
-    min_max_scaler = MinMaxScaler()
 
-    if has_label: # Do not scale the label column
-        df.loc[1:, df.columns[0: -1]] = MinMaxScaler().fit_transform(df.iloc[1:, 0:-1])
+    if scaler is None:
+        scaler = MinMaxScaler()
+
+    if has_label:  # Do not scale the label column
+        df.loc[:, df.columns[0: -1]] = scaler.fit_transform(df.iloc[:, 0:-1])
         return df
 
-    return min_max_scaler.fit_transform(df)
+    return scaler.fit_transform(df)
 
 
 def remove_duplicate_observations(df):
@@ -165,8 +176,12 @@ def remove_duplicate_observations(df):
 
 def log(df, step):
     print("---> Data status for step '{}' is: shape={}".format(step, df.shape))
+    print("---> Cols: {}".format(df.columns))
 
 
+def log_quantiles(col, q1, q3, iqr, _90th, _95th, _98th, max, skew):
+    print("Column '{}'\n==> q1={}, q3={}, IRQ={}\n==>90th={}, 95th={}, 98th={}\nmax={}\nskew={}"
+          .format(col, q1, q3, iqr, _90th, _95th, _98th, max, skew))
 
 
 

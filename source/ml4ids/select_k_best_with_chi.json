@@ -1,0 +1,198 @@
+[
+    [
+        "ACK Flag Cnt",
+        11597.620353
+    ],
+    [
+        "Bwd IAT Min",
+        8428.781875
+    ],
+    [
+        "Flow Duration",
+        8245.904081
+    ],
+    [
+        "Fwd IAT Tot",
+        8155.016954
+    ],
+    [
+        "Flow IAT Max",
+        7982.654023
+    ],
+    [
+        "Fwd IAT Max",
+        7840.841042
+    ],
+    [
+        "Fwd IAT Std",
+        7466.681953
+    ],
+    [
+        "Flow IAT Std",
+        6937.435286
+    ],
+    [
+        "Fwd IAT Mean",
+        5879.08369
+    ],
+    [
+        "Flow IAT Mean",
+        5649.462395
+    ],
+    [
+        "Flow IAT Min",
+        5625.268151
+    ],
+    [
+        "Fwd Seg Size Min",
+        5311.824559
+    ],
+    [
+        "Fwd Pkt Len Max",
+        5202.086836
+    ],
+    [
+        "Bwd IAT Max",
+        5145.425812
+    ],
+    [
+        "Fwd IAT Min",
+        5132.383781
+    ],
+    [
+        "Pkt Size Avg",
+        5122.657726
+    ],
+    [
+        "Init Bwd Win Byts",
+        5073.481762
+    ],
+    [
+        "Pkt Len Mean",
+        4439.044818
+    ],
+    [
+        "Bwd IAT Std",
+        4305.166034
+    ],
+    [
+        "Subflow Fwd Byts",
+        4215.066876
+    ],
+    [
+        "TotLen Fwd Pkts",
+        4215.066876
+    ],
+    [
+        "Bwd IAT Tot",
+        3899.672832
+    ],
+    [
+        "Bwd Seg Size Avg",
+        3671.580615
+    ],
+    [
+        "Bwd Pkt Len Mean",
+        3671.580615
+    ],
+    [
+        "Bwd IAT Mean",
+        3664.262687
+    ],
+    [
+        "Fwd Seg Size Avg",
+        3636.174382
+    ],
+    [
+        "Fwd Pkt Len Mean",
+        3636.174382
+    ],
+    [
+        "Flow Pkts/s",
+        2969.007249
+    ],
+    [
+        "Fwd Pkt Len Std",
+        2916.264773
+    ],
+    [
+        "Pkt Len Max",
+        2915.103243
+    ],
+    [
+        "Pkt Len Var",
+        2804.680608
+    ],
+    [
+        "Bwd Pkts/s",
+        2636.814791
+    ],
+    [
+        "Pkt Len Std",
+        2531.866073
+    ],
+    [
+        "Flow Byts/s",
+        2503.369402
+    ],
+    [
+        "Init Fwd Win Byts",
+        2384.127557
+    ],
+    [
+        "Fwd Pkts/s",
+        2380.971393
+    ],
+    [
+        "Subflow Bwd Byts",
+        1601.37953
+    ],
+    [
+        "TotLen Bwd Pkts",
+        1601.37953
+    ],
+    [
+        "Bwd Pkt Len Max",
+        1157.329801
+    ],
+    [
+        "Fwd Act Data Pkts",
+        1105.516913
+    ],
+    [
+        "Subflow Fwd Pkts",
+        1006.902635
+    ],
+    [
+        "Tot Fwd Pkts",
+        1006.902635
+    ],
+    [
+        "Subflow Bwd Pkts",
+        552.898934
+    ],
+    [
+        "Tot Bwd Pkts",
+        552.898934
+    ],
+    [
+        "Bwd Pkt Len Std",
+        451.148829
+    ],
+    [
+        "Fwd Header Len",
+        318.269625
+    ],
+    [
+        "Bwd Header Len",
+        184.069372
+    ],
+    [
+        "PSH Flag Cnt",
+        4.763407
+    ],
+    [
+        "Down/Up Ratio",
+        2.281795
+    ]
+]
