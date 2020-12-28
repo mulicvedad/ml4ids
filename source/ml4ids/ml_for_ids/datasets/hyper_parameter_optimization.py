@@ -49,12 +49,12 @@ def keras_mlp_cv_score(x_train, y_train, parameters, weight=None):
 
     model.compile(optimizer=optimizer,
                   loss=k.losses.MeanSquaredError(),
-                  metrics=['mse'])
+                  metrics=['mse', 'accuracy'])
 
     data = x_train
     labels = y_train
 
-    res = model.fit(data, labels, epochs=20, batch_size=parameters.get('batch_size'),
+    res = model.fit(data, labels, epochs=25, batch_size=parameters.get('batch_size'),
                     validation_split=0.2)
 
     # look at the last 10 epochs. Get the mean and standard deviation of the validation score.
@@ -86,13 +86,13 @@ parameters = [
     {
         "name": "num_hidden_layers",
         "type": "range",
-        "bounds": [1, 10],
+        "bounds": [1, 5],
         "value_type": "int"
     },
     {
         "name": "neurons_per_layer",
         "type": "range",
-        "bounds": [1, 200],
+        "bounds": [1, 250],
         "value_type": "int"
     },
     {
@@ -127,6 +127,6 @@ def run_hyperparameter_optimization(x_train, y_train, params=parameters):
     def evaluate(params):
         return {"keras_cv": keras_mlp_cv_score(x_train, y_train, params)}
 
-    for i in range(25):
+    for i in range(100):
         params, trial_index = ax_client.get_next_trial()
         ax_client.complete_trial(trial_index=trial_index, raw_data=evaluate(params))

@@ -1,111 +1,108 @@
+import os
+
 from argparse import ArgumentParser
-from enum import IntEnum
 
-from ml_for_ids.datasets.datset_info import DATASET_ROOT_DIR, IDSDataset
-from ml_for_ids.datasets.dataset_ingestion import load_csv_dataset
-from ml_for_ids.datasets.dataset_preprocess import dataset_cleanup
-from ml_for_ids.datasets.dataset_preprocess import split_data
+import pandas as pd
+from sklearn.feature_selection import SelectKBest, chi2, f_classif, mutual_info_classif
+
+from sklearn.utils import shuffle
+
+from ml_for_ids.utils import *
+from ml_for_ids.datasets.datset_info import *
+from ml_for_ids.datasets.dataset_ingestion import *
+from ml_for_ids.datasets.dataset_preprocess import *
+from ml_for_ids.datasets.dataset_visualization import *
 from ml_for_ids.ml_models.dnn import SimpleDNNModel
-from ml_for_ids.training_setup import setups
+from ml_for_ids.datasets.hyper_parameter_optimization import run_hyperparameter_optimization
 
 
-class MLMethod(IntEnum):
-    DNN = 1
+SAMPLED_CSV_PATH = "dataset/csecic2018/predefined/sample_data.csv"
 
+OUTPUT_DIR = "reports/" + get_time_based_dir_name()
+os.mkdir(OUTPUT_DIR)
+os.mkdir(OUTPUT_DIR + "/images")
 
-class DatasetAction(IntEnum):
-    TRAIN = 1
-    TEST = 2
+EXCLUDED_FEATURES = [
+    CICIDS18Feature.DST_PORT.get_raw_col_name(),
+    CICIDS18Feature.TIMESTAMP.get_raw_col_name(),
+    CICIDS18Feature.PROTOCOL.get_raw_col_name()
+]
 
 
 def parse_cmd_args():
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("-ds", "--dataset", type=int, help="Dataset number (0 - UNSW_NB15, 1 - CIC_IDS_2017, 2 - CIC_IDS_2018" )
-    arg_parser.add_argument("-so", "--save-output", action="store_true", help="Save training output")
-    arg_parser.add_argument("-od", "--output-dir", help="Directory for saving output")
-    arg_parser.add_argument("-i", "--interactive", action="store_true", help="Interactive mode")
-    arg_parser.add_argument("-st", "--skip-training", action="store_true", help="Skip model training and load pretrained model")
-    arg_parser.add_argument("-us", "--use-setup", action="store_true", help="Use predefined setup for multiple traning sessions")
+    arg_parser.add_argument("-s", "--simple", action="store_true", help="Use predefined training and testing sets which are reduced in size for faster processing")
+    arg_parser.add_argument("-ot", "--only-test", action="store_true", help="Skip training, load latest trained model and perform test")
+    arg_parser.add_argument("-r", "--remote", action="store_true", help="Indicates that the script is run on a remote server (Colab)")
+    arg_parser.add_argument("-v", "--with-visualization", action="store_true", help="Indicates that the plotting should be done")
     return arg_parser.parse_args()
 
 
 def main():
-    if __name__ == "__main__":
-        args = parse_cmd_args()
+    print("Current working directory:{}".format(os.getcwd()))
 
-        if args.interactive:
-            interactive_mode()
-        elif args.dataset:
-            process(datasets=[IDSDataset(args.dataset)],
-                    setups=setups if args.use_setup else None,
-                    actions=[DatasetAction.TRAIN if not args.skip_training else None, DatasetAction.TEST])
-        elif args.skip_training:
-            process(actions=[DatasetAction.TEST])
-        else:
-            process()
+    args = parse_cmd_args()
+    dataset = IDSDataset.CSE_CIC_IDS_2018
 
+    if args.simple:
+        df = pd.read_csv(dataset.get_sample_csv_path())
+    else:
+        df = load_csv_dataset(dir_with_csvs=DATASET_ROOT_DIR + dataset.get_dataset_dir())
 
-def interactive_mode():
-    while True:
-        print("Select dataset:")
-        for k, v in enumerate(IDSDataset):
-            print("{}-{}".format(k + 1, v.name))
-        selected_dataset = int(input())
+    for col in dataset.get_cols_to_ignore():
+        del df[col]
 
-        if selected_dataset not in list(map(int, IDSDataset)):
-            raise Exception("Invalid dataset selected")
+    df = remove_duplicate_observations(df)
 
-        for k, v in enumerate(MLMethod):
-            print("{}-{}".format(k + 1, v.name))
-        selected_ml_method = int(input())
+    desc = describe_dataset(df)
+    save_desc(desc)
 
-        if int(selected_ml_method) not in list(map(int, MLMethod)):
-            raise Exception("Invalid ML method selected")
+    df = shuffle(df)
 
-        for k, v in enumerate(DatasetAction):
-            print("{}-{}".format(k + 1, v.name))
-        selected_action = int(input())
+    df = cast_to_float(df)
 
-        if int(selected_action) not in list(map(int, DatasetAction)):
-            raise Exception("Invalid action selected")
+    analyze_missing_data(df)
 
-        process([IDSDataset(selected_dataset)], [MLMethod(selected_ml_method)], [DatasetAction(selected_action)])
+    df = handle_negative_and_inf_values(df)
+    df = handle_missing_data(df)
 
-        print("Continue? (y/n)")
-        if input() != "y":
-            break
+    if args.with_visualization:
+        plot_histogram_for_each_feature(df, destination_path_supplier=get_image_path("hist"))
+        plot_boxplot_for_each_feature(df, destination_path_supplier=get_image_path("box"))
 
+    handle_outliers(df)
 
-def _process(binary_classifier, actions, setups):
-    for setup in setups:
-        if DatasetAction.TRAIN in actions:
-            binary_classifier.train(training_setup=setup)
-            binary_classifier.save()
-        else:
-            binary_classifier.load()
+    df = scale_numeric_data(df)  #, scaler=RobustScaler(with_centering=False))
+    df = remove_duplicate_observations(df)
 
-        binary_classifier.test()
-        binary_classifier.plot_confusion_matrix()
+    if args.with_visualization:
+        plot_histogram_for_each_feature(df, destination_path_supplier=get_image_path("hist"))
+        plot_boxplot_for_each_feature(df, destination_path_supplier=get_image_path("box"))
 
-        if DatasetAction.TRAIN not in actions:
-            break
+    x_train, x_test, y_train, y_test = split_data(df, target_map_fun=IDSDataset.get_target_map_fun(dataset))
+
+    model = SimpleDNNModel(x_train, x_test, y_train, y_test, dataset.get_dataset_dir())
+    model.train()
+    model.test()
+    model.save()
+    model.plot_confusion_matrix()
+
+    run_hyperparameter_optimization(x_train, y_train)
 
 
-def process(datasets=[IDSDataset.UNSW_NB15, IDSDataset.CSE_CIC_IDS_2017, IDSDataset.UNSW_NB15],
-            ml_methods=[MLMethod.DNN],
-            actions=[DatasetAction.TRAIN, DatasetAction.TEST],
-            setups=[dict(n_epochs=20, batch_size=20)]):
-    for dataset in datasets:
-        data_frame = load_csv_dataset(dir_with_csvs=DATASET_ROOT_DIR + dataset.get_dataset_dir(),
-                                      use_columns=dataset.get_attrs())
-        data_frame = dataset_cleanup(data_frame)
+def describe_dataset(df):
+    desc = df.describe()
+    print("DATASET DESC")
+    print(desc)
+    return desc
 
-        # Split data from pandas DataFrame to Numpy arrays for training and testing
-        x_train, x_test, y_train, y_test = split_data(data_frame, target_map_fun=IDSDataset.get_target_map_fun(dataset))
 
-        for ml_method in ml_methods:
-            if ml_method == MLMethod.DNN:
-                _process(SimpleDNNModel(x_train, x_test, y_train, y_test, dataset.get_dataset_dir()), actions, setups)
+def get_image_path(plot_type):
+    return lambda x: OUTPUT_DIR + "/images/{}_{}_{}".format(x.replace("/", "_"), plot_type, get_time_based_file_name("png"))
+
+
+def save_desc(desc):
+    pd.DataFrame(desc).to_csv(OUTPUT_DIR + "/dataset_meta.csv")
 
 
 main()

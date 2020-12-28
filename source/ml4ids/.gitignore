@@ -198,7 +198,11 @@ dmypy.json
 # End of https://www.gitignore.io/api/python,pycharm
 
 dataset
+reports
+trained_models
+pcaps
+
+.idea
 
 rootmodule/__pycache__
 
-pcaps

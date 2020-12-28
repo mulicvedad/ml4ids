@@ -32,10 +32,10 @@ class SimpleDNNModel(BinaryClassifier):
         if y_train is None:
             y_train = self.y_train
         if training_setup is None:
-            training_setup = dict(n_epochs=20, batch_size=20)
+            training_setup = dict(n_epochs=20, batch_size=128)
 
         csv_logger = CSVLogger("ml_for_ids/" + self.trained_model_dir + "/" + get_time_based_file_name("log"))
-        early_stopping = EarlyStopping(monitor='val_accuracy', mode='max', verbose=1, patience=10, restore_best_weights=True)
+        early_stopping = EarlyStopping(monitor='accuracy', mode='max', verbose=1, patience=10, restore_best_weights=True)
         self._training_history = self.model.fit(x_train, y_train, epochs=training_setup["n_epochs"],
                                                 batch_size=training_setup["batch_size"], shuffle=True, verbose=1,
                                                 callbacks=[csv_logger, early_stopping])
@@ -51,8 +51,12 @@ class SimpleDNNModel(BinaryClassifier):
         print('Test accuracy:', self._test_accuracy)
 
     def save(self):
-        saved_json_file_path = save_json_to_file(self.trained_model_dir, self.model.to_json())
-        self.model.save_weights(saved_json_file_path.replace("json", "h5"))
+        try:
+            saved_json_file_path = save_json_to_file(self.trained_model_dir, self.model.to_json())
+            self.model.save_weights(saved_json_file_path.replace("json", "h5"))
+        except:
+            from sys import exc_info
+            print("Failed to save trained model", exc_info()[0], "occurred.")
 
     def load(self):
         try:
